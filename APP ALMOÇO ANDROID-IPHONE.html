@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Controle de Refeitório - CETI Ferdinand Freitas</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        :root {
+            --azul: #0f172a;
+            --azul-claro: #1e40af;
+            --verde: #16a34a;
+            --verde-claro: #22c55e;
+            --vermelho: #dc2626;
+            --vermelho-claro: #ef4444;
+            --laranja: #f59e0b;
+            --cinza: #f8fafc;
+            --cinza-escuro: #cbd5e1;
+            --texto: #1e293b;
+            --sombra: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--cinza);
+            color: var(--texto);
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        header {
+            background-color: var(--azul);
+            color: white;
+            padding: 15px;
+            box-shadow: var(--sombra);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-title {
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .dashboard {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            gap: 10px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 10px 15px;
+            text-align: center;
+            flex: 1;
+            min-width: 100px;
+            backdrop-filter: blur(5px);
+        }
+
+        .card h3 {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+            color: var(--cinza-escuro);
+        }
+
+        .card p {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .card.success p { color: var(--verde-claro); }
+        .card.warning p { color: var(--laranja); }
+
+        .tabs {
+            display: flex;
+            justify-content: center;
+            background-color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            flex-wrap: nowrap;
+            overflow-x: auto;
+        }
+
+        .tab-btn {
+            padding: 12px 15px;
+            border: none;
+            background: none;
+            font-size: 0.9rem;
+            font-weight: bold;
+            color: var(--texto);
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+            flex-shrink: 0;
+            text-align: center;
+        }
+
+        .tab-btn:hover { background-color: var(--cinza); }
+        .tab-btn.active {
+            border-bottom-color: var(--azul-claro);
+            color: var(--azul-claro);
+        }
+
+        main {
+            flex: 1;
+            padding: 15px;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .tab-content { display: none; animation: fadeIn 0.3s ease-in-out; }
+        .tab-content.active { display: block; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1rem;
+            transition: background 0.3s;
+            color: white;
+            width: 100%;
+            max-width: 300px;
+        }
+        .btn-primary { background-color: var(--azul-claro); }
+        .btn-danger { background-color: var(--vermelho); }
+        .btn-success { background-color: var(--verde); }
+
+        select, input {
+            padding: 10px;
+            border: 1px solid var(--cinza-escuro);
+            border-radius: 5px;
+            font-size: 1rem;
+            width: 100%;
+        }
+
+        .scanner-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        #reader {
+            width: 100%;
+            max-width: 450px;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: var(--sombra);
+            background: white;
+            min-height: 250px;
+        }
+
+        #reader video {
+            width: 100% !important;
+            height: auto !important;
+            border-radius: 12px;
+        }
+
+        .controls { display: flex; gap: 10px; width: 100%; justify-content: center; }
+
+        .feedback-overlay {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 25px;
+            border-radius: 15px;
+            color: white;
+            text-align: center;
+            z-index: 1000;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            width: 90%;
+            max-width: 380px;
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes popIn {
+            from { opacity: 0; transform: translate(-50%, -40%) scale(0.8); }
+            to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        }
+
+        .feedback-overlay.success { background-color: var(--verde); }
+        .feedback-overlay.error { background-color: var(--vermelho); }
+        
+        .feedback-overlay h2 { margin-bottom: 10px; font-size: 1.5rem; }
+        .feedback-overlay p { margin-bottom: 8px; font-size: 1.1rem; }
+        .feedback-overlay .turma-info { font-size: 0.95rem; font-style: italic; opacity: 0.95; }
+        
+        .backdrop {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            z-index: 999;
+        }
+
+        .print-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 20px;
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: var(--sombra);
+        }
+
+        .badges-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 15px;
+        }
+
+        .badge {
+            background: white;
+            border: 1px solid var(--cinza-escuro);
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+            box-shadow: var(--sombra);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .badge svg { width: 35px; height: 35px; margin-bottom: 5px; fill: var(--azul); }
+        .badge h4 { font-size: 0.8rem; margin: 5px 0; color: var(--texto); line-height: 1.2; word-break: break-word; }
+        .badge p { font-size: 0.75rem; color: var(--texto); margin-bottom: 5px; font-weight: bold; }
+        .badge .turma { font-weight: bold; background: var(--cinza); padding: 4px; border-radius: 4px; width: 100%; font-size: 0.65rem;}
+
+        .filters {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 20px;
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: var(--sombra);
+        }
+
+        .table-responsive { overflow-x: auto; }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            box-shadow: var(--sombra);
+            border-radius: 10px;
+            overflow: hidden;
+            font-size: 0.85rem;
+        }
+
+        th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--cinza); }
+        th { background-color: var(--azul); color: white; }
+        tr:hover { background-color: var(--cinza); }
+
+        .btn-estornar {
+            background-color: var(--vermelho-claro);
+            color: white;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        @media print {
+            body * { visibility: hidden; }
+            header, .tabs, .print-controls, .filters { display: none !important; }
+            #tab-qrcodes, #tab-qrcodes * { visibility: visible; }
+            #tab-qrcodes { position: absolute; left: 0; top: 0; width: 100%; }
+            .badges-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+            .badge { page-break-inside: avoid; border: 1px solid #000; box-shadow: none; padding: 10px; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-title">CETI Ferdinand Freitas - Refeitório</div>
+        <div class="dashboard">
+            <div class="card">
+                <h3>Total</h3>
+                <p id="dash-total">0</p>
+            </div>
+            <div class="card success">
+                <h3>Comeram</h3>
+                <p id="dash-comeram">0</p>
+            </div>
+            <div class="card warning">
+                <h3>Faltam</h3>
+                <p id="dash-faltam">0</p>
+            </div>
+        </div>
+    </header>
+
+    <nav class="tabs">
+        <button class="tab-btn active" onclick="switchTab('tab-scanner')">📷 Scanner</button>
+        <button class="tab-btn" onclick="switchTab('tab-qrcodes')">📇 Crachás</button>
+        <button class="tab-btn" onclick="switchTab('tab-history')">📋 Histórico</button>
+    </nav>
+
+    <main>
+        <section id="tab-scanner" class="tab-content active">
+            <div class="scanner-container">
+                <div class="controls">
+                    <button class="btn btn-success" id="btn-start" onclick="startScanner()">Ligar Câmara</button>
+                    <button class="btn btn-danger" id="btn-stop" style="display:none;" onclick="stopScanner()">Desligar Câmara</button>
+                </div>
+                <div id="reader"></div>
+            </div>
+        </section>
+
+        <section id="tab-qrcodes" class="tab-content">
+            <div class="print-controls">
+                <select id="select-turma-print" onchange="generateBadges()">
+                    <option value="all">Todas as Turmas</option>
+                </select>
+                <button class="btn btn-primary" onclick="window.print()">🖨️ Imprimir Crachás</button>
+            </div>
+            <div class="badges-grid" id="badges-container"></div>
+        </section>
+
+        <section id="tab-history" class="tab-content">
+            <div class="filters">
+                <input type="date" id="filter-date" onchange="renderHistory()">
+                <select id="filter-turma" onchange="renderHistory()">
+                    <option value="all">Todas as Turmas</option>
+                </select>
+                <input type="text" id="filter-name" placeholder="Pesquisar por nome..." oninput="renderHistory()">
+                <input type="text" id="filter-matricula" placeholder="Pesquisar por RA..." oninput="renderHistory()">
+            </div>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Hora</th>
+                            <th>Turma</th>
+                            <th>RA</th>
+                            <th>Aluno</th>
+                            <th>Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-tbody"></tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <div class="backdrop" id="backdrop" onclick="hideFeedback()"></div>
+    <div class="feedback-overlay" id="feedback-overlay">
+        <h2 id="feedback-title">STATUS</h2>
+        <p id="feedback-matricula"></p>
+        <p id="feedback-nome" style="font-weight: bold;"></p>
+        <p id="feedback-turma" class="turma-info"></p>
+        <p id="feedback-horario" style="margin-top: 10px;"></p>
+    </div>
+
+    <script>
+        const students = [
+            // 1ª SÉRIE - FARMÁCIA A
+            { id: "78129458918", name: "ANDRÉ REIS OLIVEIRA RIBEIRO", turma: "1ª SÉRIE - FARMÁCIA A" },
+            { id: "78718773338", name: "AUGUSTO LIMA PEREIRA", turma: "1ª SÉRIE - FARMÁCIA A" },
+            { id: "79705452580", name: "AYILSON LIMA DE AMORIM", turma: "1ª SÉRIE - FARMÁCIA A" },
+            { id: "78711695501", name: "CARLOS EDUARDO COSTA DA SILVA", turma: "1ª SÉRIE - FARMÁCIA A" },
+            { id: "78631160008", name: "CAUA DIAS RODRIGUES", turma: "1ª SÉRIE - FARMÁCIA A" },
+            { id: "78714681404", name: "CRISTIAN VICTOR FERREIRA DE SOUSA", turma: "1ª SÉRIE - FARMÁCIA A" },
+            { id: "78557842538", name: "DEYVID SALES DA SILVA", turma: "1ª SÉRIE - FARMÁCIA A" },
+            { id: "78396611424", name: "EMANUELY VITORIA CARVALHO DE LIMA", turma: "1ª SÉRIE - FARMÁCIA A" },
+            { id: "71455613215", name: "FRANCISCO DOUGLAS FERREIRA CAMPOS", turma: "1ª SÉRIE - FARMÁCIA A" },
+            { id: "78628844708", name: "FRANCISCO HENZO SILVA SANTOS", turma: "1ª SÉRIE - FARMÁCIA A" },
+            { id: "78620454790", name: "FRANCISCO HERDESON MENDES DA SILVA", turma: "1ª SÉRIE - FARMÁCIA A" },
+            { id: "78120018850", name: "FRANCISCO KARTYEL CARDOSO DA SILVA", turma: "1ª SÉRIE - FARMÁCIA A" },
+            { id: "78284848724", name: "FRANCISCO KAUA DOS SANTOS LAURINDO", turma: "1ª SÉRIE - FARMÁCIA A" },
+            { id: "78550241865", name: "FRANCISCO YAGO LIMA ROCHA", turma: "1ª SÉRIE - FARMÁCIA A" },
+            { id: "78548138378", name: "GUILHERME RODRIGUES DA SILVA", turma: "1ª SÉRIE - FARMÁCIA A" },
+            { id: "78721187541", name: "ISADORA DORNELES RABELO", turma: "1ª SÉRIE - FARMÁCIA A" },
+            { id: "78656070282", name: "JAQUELINE MARIA CHAVES SILVA", turma: "1ª SÉRIE - FARMÁCIA A" },
+            { id: "78379964810", name: "JOANA BEATRIZ LAURINDO DE OLIVEIRA", turma: "1ª SÉRIE - FARMÁCIA A" },
+            { id: "78203854761", name: "JOAO ΥΤALO DA SILVA ARAUJO", turma: "1ª SÉRIE - FARMÁCIA A" },
+            { id: "78693259300", name: "JUNIOR MATOS DA ROCHA", turma: "1ª SÉRIE - FARMÁCIA A" },
+            { id: "78698314457", name: "KEVEM MARLEY MARQUES ARAUJO", turma: "1ª SÉRIE - FARMÁCIA A" },
+            { id: "80759487537", name: "LUANA MARIA CARVALHO DA MATA", turma: "1ª SÉRIE - FARMÁCIA A" },
+            { id: "78543358116", name: "LUCAS VINICIUS SALES SILVA", turma: "1ª SÉRIE - FARMÁCIA A" },
+            { id: "78354513300", name: "MARCELA DARLEM TORRES MORAES", turma: "1ª SÉRIE - FARMÁCIA A" },
+            { id: "78732019491", name: "MARCELLA EDIVANIA CRAVEIRO DO NASCIMENTO", turma: "1ª SÉRIE - FARMÁCIA A" },
+            { id: "78648321255", name: "MARIA LEILLIANE OLIVEIRA DA SILVA", turma: "1ª SÉRIE - FARMÁCIA A" },
+            { id: "65650047359", name: "MARIA PAULA MOREIRA DOS SANTOS", turma: "1ª SÉRIE - FARMÁCIA A" },
+            { id: "78738545861", name: "MARIA RITA FORTES MOURA", turma: "1ª SÉRIE - FARMÁCIA A" },
+            { id: "78190376136", name: "MARIA SILVIA MARINHO DOS SANTOS", turma: "1ª SÉRIE - FARMÁCIA A" },
+            { id: "78354359972", name: "MAURÍCIO REIS LIRA DA SILVA JUNIOR", turma: "1ª SÉRIE - FARMÁCIA A" },
+            { id: "78679728586", name: "MAYRA GABRIELA DE OLIVEIRA SOARES", turma: "1ª SÉRIE - FARMÁCIA A" },
+            { id: "78661667186", name: "MILENA FERREIRA TORRES", turma: "1ª SÉRIE - FARMÁCIA A" },
+            { id: "80665856865", name: "MIQUEIAS FEITOSA SARAIVA", turma: "1ª SÉRIE - FARMÁCIA A" },
+            { id: "78641736280", name: "NICOLAS GABRIEL DE MENESES COSTA", turma: "1ª SÉRIE - FARMÁCIA A" },
+            { id: "78733041288", name: "PABLO LUÍDE OLIVEIRA SILVA", turma: "1ª SÉRIE - FARMÁCIA A" },
+            { id: "78285841502", name: "PEDRO PAULO DA SILVA FILGUEIRA NETO", turma: "1ª SÉRIE - FARMÁCIA A" },
+            { id: "78184482612", name: "REGINALDO DE ARAUJO SILVA FILHO", turma: "1ª SÉRIE - FARMÁCIA A" },
+            { id: "78234962108", name: "SAMUEL ALVES ARAUJO", turma: "1ª SÉRIE - FARMÁCIA A" },
+            { id: "78694670429", name: "VITÓRIA MARIA CARVALHO DA SILVA", turma: "1ª SÉRIE - FARMÁCIA A" },
+            { id: "78721844550", name: "YSLLANE ELLY SOUSA OLIVEIRA", turma: "1ª SÉRIE - FARMÁCIA A" },
+
+            // 1ª SÉRIE - DESENV. SISTEMAS A
+            { id: "58719404778", name: "ALESSANDRA ESMERALDA DE OLIVEIRA DANTAS", turma: "1ª SÉRIE - DESENV. SISTEMAS A" },
+            { id: "78792217800", name: "ALEXANDRE COSTA DA SILVA", turma: "1ª SÉRIE - DESENV. SISTEMAS A" },
+            { id: "78659224116", name: "ALEXIA MARIA SOUZA MUNIZ", turma: "1ª SÉRIE - DESENV. SISTEMAS A" },
+            { id: "78707697155", name: "AMANDA VITÓRIA DA SILVA COSTA", turma: "1ª SÉRIE - DESENV. SISTEMAS A" },
+            { id: "78804731699", name: "ANA MARIA DOS SANTOS ARAÚJO", turma: "1ª SÉRIE - DESENV. SISTEMAS A" },
+            { id: "70980414105", name: "ANTÔNIO DOS REIS CARVALHO SILVA", turma: "1ª SÉRIE - DESENV. SISTEMAS A" },
+            { id: "78694918730", name: "BIANCA SOUSA FERREIRA", turma: "1ª SÉRIE - DESENV. SISTEMAS A" },
+            { id: "78982849610", name: "BRUNE ERISON CARDOSO DE OLIVEIRA", turma: "1ª SÉRIE - DESENV. SISTEMAS A" },
+            { id: "78549664391", name: "CARLOS EDUARDO ALVES DA ROCHA", turma: "1ª SÉRIE - DESENV. SISTEMAS A" },
+            { id: "79138784050", name: "CARLOS EDUARDO PEREIRA DA SILVA", turma: "1ª SÉRIE - DESENV. SISTEMAS A" },
+            { id: "78210504355", name: "CAUA VICTOR OLIVEIRA SANTOS", turma: "1ª SÉRIE - DESENV. SISTEMAS A" },
+            { id: "71057293610", name: "CHRISLLANE PEREIRA DA CONCEIÇÃO", turma: "1ª SÉRIE - DESENV. SISTEMAS A" },
+            { id: "78727061256", name: "CRISTIANO DA SILVA MEDEIROS", turma: "1ª SÉRIE - DESENV. SISTEMAS A" },
+            { id: "78359184836", name: "DANY ELLEM RODRIGUES SILVA", turma: "1ª SÉRIE - DESENV. SISTEMAS A" },
+            { id: "79270530809", name: "DOUGLAS GABRIEL DE OLIVEIRA CUNHA", turma: "1ª SÉRIE - DESENV. SISTEMAS A" },
+            { id: "78699860749", name: "ERIC ALESSANDRO ALVES", turma: "1ª SÉRIE - DESENV. SISTEMAS A" },
+            { id: "78824537855", name: "ERICK RONNY SOUSA SILVA", turma: "1ª SÉRIE - DESENV. SISTEMAS A" },
+            { id: "78380247345", name: "ERIK BRUNO LIMA QUARESMA", turma: "1ª SÉRIE - DESENV. SISTEMAS A" },
+            { id: "78770043744", name: "ERIK RIAN COELHO DA SILVA", turma: "1ª SÉRIE - DESENV. SISTEMAS A" },
+            { id: "78933677453", name: "EVERTON VINICIUS MIRANDA E SILVA", turma: "1ª SÉRIE - DESENV. SISTEMAS A" },
+            { id: "78683673898", name: "FRANCISCO ANDRÉ DOS SANTOS", turma: "1ª SÉRIE - DESENV. SISTEMAS A" },
+            { id: "78985363328", name: "FRANCISCO CARLOS DA CONCEICAO DE JESUS", turma: "1ª SÉRIE - DESENV. SISTEMAS A" },
+            { id: "80483834904", name: "FRANCISCO GUSTAVO MARQUES DE SOUSA", turma: "1ª SÉRIE - DESENV. SISTEMAS A" }
+        ];
+
+        let records = JSON.parse(localStorage.getItem('almocosCETI2026')) || [];
+        let html5QrCode;
+        let isProcessingScan = false;
+        let audioCtx;
+
+        window.onload = () => {
+            document.getElementById('filter-date').value = getTodayDate();
+            populateTurmaFilters();
+            updateDashboard();
+            generateBadges();
+            renderHistory();
+        };
+
+        function populateTurmaFilters() {
+            const turmas = [...new Set(students.map(s => s.turma))].sort();
+            const selectPrint = document.getElementById('select-turma-print');
+            const selectHistory = document.getElementById('filter-turma');
+
+            turmas.forEach(turma => {
+                selectPrint.add(new Option(turma, turma));
+                selectHistory.add(new Option(turma, turma));
+            });
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            event.currentTarget.classList.add('active');
+
+            if(tabId !== 'tab-scanner' && html5QrCode && html5QrCode.isScanning) {
+                stopScanner();
+            }
+        }
+
+        function getTodayDate() {
+            const today = new Date();
+            today.setMinutes(today.getMinutes() - today.getTimezoneOffset());
+            return today.toISOString().split('T')[0];
+        }
+
+        function getCurrentTime() {
+            const now = new Date();
+            return now.toLocaleTimeString('pt-BR', { hour12: false }).substring(0, 8);
+        }
+
+        function formatDisplayDate(dateString) {
+            const parts = dateString.split('-');
+            if(parts.length !== 3) return dateString;
+            return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        }
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function playBeep(isSuccess) {
+            try {
+                if (!audioCtx) initAudio();
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+
+                if (isSuccess) {
+                    oscillator.type = 'sine';
+                    oscillator.frequency.setValueAtTime(800, audioCtx.currentTime);
+                    gainNode.gain.setValueAtTime(0.5, audioCtx.currentTime);
+                    oscillator.start();
+                    oscillator.stop(audioCtx.currentTime + 0.15);
+                } else {
+                    oscillator.type = 'sawtooth';
+                    oscillator.frequency.setValueAtTime(150, audioCtx.currentTime);
+                    gainNode.gain.setValueAtTime(0.5, audioCtx.currentTime);
+                    oscillator.start();
+                    oscillator.stop(audioCtx.currentTime + 0.6);
+                }
+            } catch(e) {
+                console.log("Erro de áudio no iOS: ", e);
+            }
+        }
+
+        function updateDashboard() {
+            const today = getTodayDate();
+            const todayRecords = records.filter(r => r.data === today);
+            
+            document.getElementById('dash-total').innerText = students.length;
+            document.getElementById('dash-comeram').innerText = todayRecords.length;
+            document.getElementById('dash-faltam').innerText = students.length - todayRecords.length;
+        }
+
+        async function startScanner() {
+            initAudio();
+
+            // Verificação de ambiente seguro (HTTPS) para o Safari iOS
+            if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+                alert("O Safari (iOS) bloqueia a câmara se o site não estiver a ser executado via HTTPS.\n\nPara funcionar no iPhone, coloque o ficheiro no GitHub Pages ou num servidor HTTPS.");
+                return;
+            }
+
+            document.getElementById('btn-start').style.display = 'none';
+            document.getElementById('btn-stop').style.display = 'block';
+
+            if (!html5QrCode) {
+                html5QrCode = new Html5Qrcode("reader");
+            }
+
+            const config = { 
+                fps: 10, 
+                qrbox: { width: 220, height: 220 }
+            };
+
+            try {
+                // Obter câmaras disponíveis para contornar o problema de sintaxe do iOS
+                const devices = await Html5Qrcode.getCameras();
+                if (devices && devices.length) {
+                    // Tentar encontrar a câmara traseira ("back", "environment" ou última da lista)
+                    let backCamera = devices.find(device => 
+                        device.label.toLowerCase().includes('back') || 
+                        device.label.toLowerCase().includes('traseira') ||
+                        device.label.toLowerCase().includes('environment')
+                    );
+                    
+                    const cameraId = backCamera ? backCamera.id : devices[devices.length - 1].id;
+
+                    await html5QrCode.start(cameraId, config, onScanSuccess, onScanFailure);
+                } else {
+                    // Tentar seleção genérica
+                    await html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess, onScanFailure);
+                }
+
+                // Correção específica para o Safari iOS: forçar o atributo 'playsinline'
+                const videoElem = document.querySelector("#reader video");
+                if (videoElem) {
+                    videoElem.setAttribute("playsinline", "true");
+                    videoElem.setAttribute("webkit-playsinline", "true");
+                }
+
+            } catch (err) {
+                alert("Erro ao aceder à câmara no Safari/iOS: " + err);
+                document.getElementById('btn-start').style.display = 'block';
+                document.getElementById('btn-stop').style.display = 'none';
+            }
+        }
+
+        function stopScanner() {
+            if (html5QrCode && html5QrCode.isScanning) {
+                html5QrCode.stop().then(() => {
+                    document.getElementById('btn-start').style.display = 'block';
+                    document.getElementById('btn-stop').style.display = 'none';
+                }).catch(err => console.error(err));
+            }
+        }
+
+        function onScanSuccess(decodedText) {
+            if (isProcessingScan) return;
+            isProcessingScan = true; 
+            
+            processQRCode(decodedText);
+
+            setTimeout(() => {
+                isProcessingScan = false;
+                hideFeedback();
+            }, 2500);
+        }
+
+        function onScanFailure(error) {
+            // Silencioso para frames sem QR Code
+        }
+
+        function processQRCode(matriculaLida) {
+            const student = students.find(s => s.id === matriculaLida.trim());
+            const today = getTodayDate();
+
+            if (!student) {
+                showFeedback(false, { id: matriculaLida, name: "QR CODE NÃO CADASTRADO", turma: "Desconhecida" }, "--:--");
+                return;
+            }
+
+            const recordExists = records.find(r => r.matricula === student.id && r.data === today);
+
+            if (recordExists) {
+                showFeedback(false, student, recordExists.horario);
+            } else {
+                const newRecord = {
+                    id: Date.now().toString(),
+                    data: today,
+                    horario: getCurrentTime(),
+                    matricula: student.id,
+                    nome: student.name,
+                    turma: student.turma
+                };
+                
+                records.push(newRecord);
+                localStorage.setItem('almocosCETI2026', JSON.stringify(records));
+                
+                updateDashboard();
+                renderHistory();
+                showFeedback(true, student, newRecord.horario);
+            }
+        }
+
+        function showFeedback(isSuccess, student, horario) {
+            playBeep(isSuccess);
+            
+            const overlay = document.getElementById('feedback-overlay');
+            const backdrop = document.getElementById('backdrop');
+            
+            overlay.className = 'feedback-overlay ' + (isSuccess ? 'success' : 'error');
+            document.getElementById('feedback-title').innerText = isSuccess ? "ALMOÇO LIBERADO" : "JÁ ALMOÇOU HOJE";
+            document.getElementById('feedback-matricula').innerText = `RA: ${student.id}`;
+            document.getElementById('feedback-nome').innerText = student.name;
+            document.getElementById('feedback-turma').innerText = student.turma;
+            document.getElementById('feedback-horario').innerText = isSuccess ? `Registrado às: ${horario}` : `1º Registro às: ${horario}`;
+            
+            backdrop.style.display = 'block';
+            overlay.style.display = 'block';
+        }
+
+        function hideFeedback() {
+            document.getElementById('backdrop').style.display = 'none';
+            document.getElementById('feedback-overlay').style.display = 'none';
+        }
+
+        function generateBadges() {
+            const container = document.getElementById('badges-container');
+            const turmaFiltro = document.getElementById('select-turma-print').value;
+            container.innerHTML = '';
+
+            const svgIcon = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>`;
+            const alunosPrint = turmaFiltro === 'all' ? students : students.filter(s => s.turma === turmaFiltro);
+
+            alunosPrint.forEach(student => {
+                const badge = document.createElement('div');
+                badge.className = 'badge';
+                
+                badge.innerHTML = `
+                    ${svgIcon}
+                    <div id="qr-${student.id}" style="margin: 8px 0;"></div>
+                    <h4>${student.name}</h4>
+                    <p>RA: ${student.id}</p>
+                    <div class="turma">${student.turma}</div>
+                `;
+                
+                container.appendChild(badge);
+
+                setTimeout(() => {
+                    const elem = document.getElementById(`qr-${student.id}`);
+                    if(elem) {
+                        new QRCode(elem, {
+                            text: student.id,
+                            width: 90,
+                            height: 90,
+                            colorDark : "#0f172a",
+                            colorLight : "#ffffff",
+                            correctLevel : QRCode.CorrectLevel.H
+                        });
+                    }
+                }, 20);
+            });
+        }
+
+        function renderHistory() {
+            const filterDate = document.getElementById('filter-date').value;
+            const filterTurma = document.getElementById('filter-turma').value;
+            const filterName = document.getElementById('filter-name').value.toLowerCase();
+            const filterMat = document.getElementById('filter-matricula').value.toLowerCase();
+            
+            const tbody = document.getElementById('history-tbody');
+            tbody.innerHTML = '';
+
+            const filteredRecords = records.filter(r => {
+                const matchDate = filterDate ? r.data === filterDate : true;
+                const matchTurma = filterTurma === 'all' ? true : r.turma === filterTurma;
+                const matchName = r.nome.toLowerCase().includes(filterName);
+                const matchMat = r.matricula.toLowerCase().includes(filterMat);
+                return matchDate && matchTurma && matchName && matchMat;
+            }).sort((a, b) => {
+                if (a.data !== b.data) return b.data.localeCompare(a.data);
+                return b.horario.localeCompare(a.horario);
+            });
+
+            if(filteredRecords.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center">Nenhum registro encontrado.</td></tr>`;
+                return;
+            }
+
+            filteredRecords.forEach(r => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${formatDisplayDate(r.data)}</td>
+                    <td>${r.horario}</td>
+                    <td>${r.turma}</td>
+                    <td>${r.matricula}</td>
+                    <td>${r.nome}</td>
+                    <td><button class="btn-estornar" onclick="deleteRecord('${r.id}')">Apagar</button></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function deleteRecord(id) {
+            if(confirm('Tem certeza que deseja apagar este registo?')) {
+                records = records.filter(r => r.id !== id);
+                localStorage.setItem('almocosCETI2026', JSON.stringify(records));
+                updateDashboard();
+                renderHistory();
+            }
+        }
+    </script>
+</body>
+</html>
